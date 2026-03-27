@@ -538,19 +538,17 @@ fn next_frame(
             }
         }
         AnimationDirection::Reverse => {
-            let next = state.current_frame.checked_sub(1).unwrap_or(*range.end());
-
-            if next == *range.end() {
+            if state.current_frame <= *range.start() {
                 match animation.repeat {
                     AnimationRepeat::Loop => {
-                        state.current_frame = range.end() - 1;
-                        state.relative_frame = range.end() - range.start() - 1;
+                        state.current_frame = *range.end();
+                        state.relative_frame = range.end() - range.start();
                         events.write(AnimationEvents::LoopCycleFinished(trigger.0));
                     }
                     AnimationRepeat::Count(count) => {
                         if count > 0 {
-                            state.current_frame = range.end() - 1;
-                            state.relative_frame = range.end() - range.start() - 1;
+                            state.current_frame = *range.end();
+                            state.relative_frame = range.end() - range.start();
                             animation.repeat = AnimationRepeat::Count(count - 1);
                         } else {
                             if animation.queue.is_empty() {
@@ -562,19 +560,19 @@ fn next_frame(
                     }
                 }
             } else {
-                state.current_frame = next;
-                state
+                state.current_frame -= 1;
+                state.relative_frame = state
                     .relative_frame
                     .checked_sub(1)
-                    .unwrap_or(range.end() - range.start() - 1);
+                    .unwrap_or(range.end() - range.start());
             }
         }
         AnimationDirection::PingPong | AnimationDirection::PingPongReverse => {
             let (next, relative_next) = match state.current_direction {
                 PlayDirection::Forward => (state.current_frame + 1, state.relative_frame + 1),
                 PlayDirection::Backward => (
-                    state.relative_frame.checked_sub(1).unwrap_or(0),
                     state.current_frame.checked_sub(1).unwrap_or(0),
+                    state.relative_frame.checked_sub(1).unwrap_or(0),
                 ),
             };
 
@@ -583,19 +581,19 @@ fn next_frame(
                 PlayDirection::Backward => false,
             };
 
-            if next >= *range.end() && is_forward {
+            if next > *range.end() && is_forward {
                 match animation.repeat {
                     AnimationRepeat::Loop => {
                         state.current_direction = PlayDirection::Backward;
-                        state.current_frame = range.end() - 2;
-                        state.relative_frame = range.end() - range.start() - 2;
+                        state.current_frame = range.end().saturating_sub(1);
+                        state.relative_frame = (range.end() - range.start()).saturating_sub(1);
                         events.write(AnimationEvents::LoopCycleFinished(trigger.0));
                     }
                     AnimationRepeat::Count(count) => {
                         if count > 0 {
                             state.current_direction = PlayDirection::Backward;
-                            state.current_frame = range.end() - 2;
-                            state.relative_frame = range.end() - range.start() - 2;
+                            state.current_frame = range.end().saturating_sub(1);
+                            state.relative_frame = (range.end() - range.start()).saturating_sub(1);
                             animation.repeat = AnimationRepeat::Count(count - 1);
                         } else {
                             if animation.queue.is_empty() {
@@ -606,19 +604,21 @@ fn next_frame(
                         }
                     }
                 };
-            } else if next <= *range.start() && !is_forward {
+            } else if !is_forward && state.current_frame <= *range.start() {
+                let next_frame = (*range.start() + 1).min(*range.end());
+                let next_relative = (next_frame - range.start()).min(range.end() - range.start());
                 match animation.repeat {
                     AnimationRepeat::Loop => {
                         state.current_direction = PlayDirection::Forward;
-                        state.current_frame = *range.start();
-                        state.relative_frame = 0;
+                        state.current_frame = next_frame;
+                        state.relative_frame = next_relative;
                         events.write(AnimationEvents::LoopCycleFinished(trigger.0));
                     }
                     AnimationRepeat::Count(count) => {
                         if count > 0 {
                             state.current_direction = PlayDirection::Forward;
-                            state.current_frame = *range.start();
-                            state.relative_frame = 0;
+                            state.current_frame = next_frame;
+                            state.relative_frame = next_relative;
                             animation.repeat = AnimationRepeat::Count(count - 1);
                         } else {
                             if animation.queue.is_empty() {
