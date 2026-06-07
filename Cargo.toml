@@ -10,7 +10,7 @@ license = "MIT"
 readme = "README.md"
 
 [dependencies]
-bevy = { version = "0.18", default-features = false, features = [
+bevy = { rev = "d06aa47744dfa378f2e8a31cd7ff2d59c9afe4b9", git = "https://github.com/bevyengine/bevy", default-features = false, features = [
   "bevy_sprite",
   "bevy_sprite_render",
   "bevy_ui",
@@ -29,7 +29,7 @@ image = { version = "0.25.6", optional = true }
 anyhow = "1.0.98"
 
 [dev-dependencies]
-bevy = { version = "0.18", features = [
+bevy = { rev = "d06aa47744dfa378f2e8a31cd7ff2d59c9afe4b9", git = "https://github.com/bevyengine/bevy", features = [
   "file_watcher",
   "multi_threaded",
   "bevy_window",
